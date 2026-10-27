@@ -811,6 +811,10 @@ impl Profile {
                 Self::check_position_extremum((-a - d_sqrt) / j, t_sum, t, p, v, a, j, ext);
                 Self::check_position_extremum((-a + d_sqrt) / j, t_sum, t, p, v, a, j, ext);
             }
+        } else if a != 0.0 {
+            // Constant acceleration: the velocity crosses zero once, at -v/a. This
+            // is where a reversal braked at the acceleration limit turns.
+            Self::check_position_extremum(-v / a, t_sum, t, p, v, a, j, ext);
         }
     }
 
