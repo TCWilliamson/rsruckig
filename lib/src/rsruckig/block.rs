@@ -72,10 +72,15 @@ impl Block {
             }
             // Only happens due to numerical issues
         } else if *valid_profile_counter == 4 {
-            // Find "identical" profiles. Note that the last pair does not
-            // compare directions: a degenerate profile (e.g. with a zero-width
-            // velocity plateau) can duplicate a profile of the same direction
-            // from another family (matches upstream C++ behavior).
+            // Find "identical" profiles. Unlike C++ Ruckig (0.19.4 requires
+            // opposite directions for all three pairs and fails otherwise),
+            // the last pair does not compare directions, and the fallback
+            // below merges any two of equal duration: a degenerate profile
+            // (e.g. with a zero-width velocity plateau) can duplicate a
+            // profile of the same direction from another family
+            // (test_degenerate_boundary_state; C++ 0.19.4 fails 3 of its 7
+            // inputs). Both act only where C++ returns false, so an input
+            // C++ plans takes the same branch here.
             if f64::abs(valid_profiles[0].t_sum[6] - valid_profiles[1].t_sum[6])
                 < 32.0 * f64::EPSILON
                 && valid_profiles[0].direction != valid_profiles[1].direction
