@@ -1271,6 +1271,58 @@ fn test_degenerate_boundary_state() {
     }
 }
 
+#[test]
+fn test_step1_acc1_profile_at_the_limit() {
+    // Regression test: with large asymmetric acceleration limits, the time-
+    // optimal profile reaches the deceleration limit (ReachedLimits::ACC1),
+    // but its acceleration integrated over the phase lands a few ulps past
+    // that limit. C++ Ruckig sets it to the limit before the check
+    // (`check<UDDU, ACC1, true>`); without that, step 1 refused the profile
+    // and either found none (the second move) or a 40x slower one (the
+    // first). Durations are C++ Ruckig 0.19.4's for the same inputs.
+    // (p0, v0, pf, v_max, a_max, a_min, j_max, duration)
+    let moves: [(f64, f64, f64, f64, f64, f64, f64, f64); 2] = [
+        (
+            0.0,
+            13.915793826757358,
+            5.613113707547784,
+            1455.4579631565307,
+            240638.6265394368,
+            -104670.71916922588,
+            24541362.601308085,
+            0.019311372315759107,
+        ),
+        (
+            0.0,
+            0.0,
+            -28.240860972682604,
+            4535.282836705683,
+            106701.04533749608,
+            -125440.6060879475,
+            11435757.787945986,
+            0.043049204455377126,
+        ),
+    ];
+
+    for (i, &(p0, v0, pf, v_max, a_max, a_min, j_max, duration)) in moves.iter().enumerate() {
+        let mut input = InputParameter::<1>::new(None);
+        input.current_position = DataArrayOrVec::Stack([p0]);
+        input.current_velocity = DataArrayOrVec::Stack([v0]);
+        input.target_position = DataArrayOrVec::Stack([pf]);
+        input.max_velocity = DataArrayOrVec::Stack([v_max]);
+        input.min_velocity = Some(DataArrayOrVec::Stack([-v_max]));
+        input.max_acceleration = DataArrayOrVec::Stack([a_max]);
+        input.min_acceleration = Some(DataArrayOrVec::Stack([a_min]));
+        input.max_jerk = DataArrayOrVec::Stack([j_max]);
+
+        let mut otg = Ruckig::<1, ThrowErrorHandler>::new(None, 0.001);
+        let mut traj = Trajectory::<1>::new(None);
+        let result = otg.calculate(&input, &mut traj);
+        assert!(result.is_ok(), "move {i} failed: {result:?}");
+        assert_float_eq!(traj.get_duration(), duration, rmax <= 1e-12);
+    }
+}
+
 // Regression test for issue #16: `output.time` must be reset to zero when
 // `update()` recalculates the trajectory (e.g. on a mid-flight retarget).
 // Otherwise the new trajectory — whose time origin is the current state — is
