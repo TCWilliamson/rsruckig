@@ -453,37 +453,12 @@ impl PositionThirdOrderStep1 {
         polynom_acc1[2] = 2.0 * (self.a0 - a_min) * h2_acc1 / (j_max_j_max * j_max);
         polynom_acc1[3] = h0_acc1 / (self.j_max_j_max * self.j_max_j_max);
 
-        let mut polynom_acc0_min = polynom_acc0;
-        polynom_acc0_min[0] += 4.0 * t_min_acc0;
-        polynom_acc0_min[1] += (3.0 * polynom_acc0[0] + 6.0 * t_min_acc0) * t_min_acc0;
-        polynom_acc0_min[2] += (2.0 * polynom_acc0[1]
-            + (3.0 * polynom_acc0[0] + 4.0 * t_min_acc0) * t_min_acc0)
-            * t_min_acc0;
-        polynom_acc0_min[3] += (polynom_acc0[2]
-            + (polynom_acc0[1] + (polynom_acc0[0] + t_min_acc0) * t_min_acc0) * t_min_acc0)
-            * t_min_acc0;
-
-        // const bool polynom_none_has_solution = (polynom_none_min[0] < 0.0) || (polynom_none_min[1] < 0.0) || (polynom_none_min[2] < 0.0) || (polynom_none_min[3] <= 0.0);
-        let polynom_acc0_has_solution = (polynom_acc0_min[0] < 0.0)
-            || (polynom_acc0_min[1] < 0.0)
-            || (polynom_acc0_min[2] < 0.0)
-            || (polynom_acc0_min[3] <= 0.0);
-        let polynom_acc1_has_solution = (polynom_acc1[0] < 0.0)
-            || (polynom_acc1[1] < 0.0)
-            || (polynom_acc1[2] < 0.0)
-            || (polynom_acc1[3] <= 0.0);
-
+        // All three quartics are solved, with no sign-rule prefilter on the
+        // ACC0 and ACC1 coefficients (Budan's theorem): upstream C++ removed it
+        // in "step1 improve stability" (pantor/ruckig 3477cf8, in 0.19.4).
         let roots_none = roots::solve_quart_monic_arr(&polynom_none);
-        let roots_acc0 = if polynom_acc0_has_solution {
-            roots::solve_quart_monic_arr(&polynom_acc0)
-        } else {
-            roots::PositiveSet::new()
-        };
-        let roots_acc1 = if polynom_acc1_has_solution {
-            roots::solve_quart_monic_arr(&polynom_acc1)
-        } else {
-            roots::PositiveSet::new()
-        };
+        let roots_acc0 = roots::solve_quart_monic_arr(&polynom_acc0);
+        let roots_acc1 = roots::solve_quart_monic_arr(&polynom_acc1);
 
         for mut t in &mut roots_none.into_iter() {
             if t < t_min_none || t > t_max_none {
