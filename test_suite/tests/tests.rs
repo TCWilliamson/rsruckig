@@ -1395,3 +1395,25 @@ fn test_solve_cub_with_a_zero_constant_term() {
         .collect();
     assert_eq!(roots, [0.0, 2.0]);
 }
+
+#[test]
+fn test_first_time_at_position_crossed_twice_in_one_phase() {
+    // Starting backwards at -1, the move brakes at the acceleration limit for
+    // about 2 s (phase 1, zero jerk), passing -0.25 on the way back (t ~ 0.29)
+    // and again on the way forward (t ~ 1.71). C++ Ruckig's roots::Set sorts
+    // the cubic's roots before they are read, so the first crossing is found;
+    // the port read them unsorted and returned the second. Expected time:
+    // C++ Ruckig 0.19.4's (Python package ruckig==0.19.4).
+    let mut input = InputParameter::<1>::new(None);
+    input.current_velocity = DataArrayOrVec::Stack([-1.0]);
+    input.target_position = DataArrayOrVec::Stack([1.0]);
+    input.max_velocity = DataArrayOrVec::Stack([1.0]);
+    input.max_acceleration = DataArrayOrVec::Stack([1.0]);
+    input.max_jerk = DataArrayOrVec::Stack([1000.0]);
+
+    let mut otg = Ruckig::<1, ThrowErrorHandler>::new(None, 0.001);
+    let mut traj = Trajectory::<1>::new(None);
+    otg.calculate(&input, &mut traj).unwrap();
+    let time = traj.get_first_time_at_position(0, -0.25).unwrap();
+    assert_float_eq!(time, 0.29268652409927465, abs <= 1e-12);
+}

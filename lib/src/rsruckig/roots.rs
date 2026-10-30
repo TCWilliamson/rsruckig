@@ -21,13 +21,15 @@ pub struct Set<T, const N: usize> {
     pub data: ArrayVec<T, N>,
 }
 
-impl<T: Copy + Default + PartialEq, const N: usize> Default for Set<T, N> {
+impl<T: Copy + Default + PartialOrd, const N: usize> Default for Set<T, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: Copy + Default + PartialEq, const N: usize> Set<T, N> {
+/// Kept in ascending order, so that every way of reading it yields the values
+/// sorted, as C++ Ruckig's `roots::Set::begin()` sorts them before access.
+impl<T: Copy + Default + PartialOrd, const N: usize> Set<T, N> {
     pub fn new() -> Self {
         Set {
             data: ArrayVec::<T, N>::new(),
@@ -40,7 +42,12 @@ impl<T: Copy + Default + PartialEq, const N: usize> Set<T, N> {
 
     pub fn insert(&mut self, value: T) {
         if !self.data.contains(&value) {
-            self.data.push(value);
+            let at = self
+                .data
+                .iter()
+                .position(|x| value < *x)
+                .unwrap_or(self.data.len());
+            self.data.insert(at, value);
         }
     }
 }
@@ -96,9 +103,7 @@ impl<const N: usize> IntoIterator for PositiveSet<N> {
     type IntoIter = <ArrayVec<f64, N> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        let mut data = self.0.data;
-        data.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        data.into_iter()
+        self.0.data.into_iter()
     }
 }
 
@@ -116,7 +121,6 @@ impl<'a, const N: usize> IntoIterator for &'a mut PositiveSet<N> {
     type IntoIter = core::slice::IterMut<'a, f64>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.0.data.sort_by(|a, b| a.partial_cmp(b).unwrap());
         self.0.data.iter_mut()
     }
 }
