@@ -1412,11 +1412,18 @@ fn test_solve_cub_three_real_roots_as_cpp() {
     // x < 0), the port as atan2(y, x); equal in exact arithmetic, here an ulp
     // apart in the middle root. Expected roots: C++ Ruckig 0.19.4's
     // roots::solve_cubic compiled with g++ on glibc, as the Rust build.
-    let roots: Vec<f64> =
-        rsruckig::roots::solve_cub(1.0, -17.464806435260094, 75.99874721051052, -4.2821278752708745)
-            .into_iter()
-            .collect();
-    assert_eq!(roots, [0.05709129450392858, 7.836552326153905, 9.5711628146022587]);
+    let roots: Vec<f64> = rsruckig::roots::solve_cub(
+        1.0,
+        -17.464806435260094,
+        75.99874721051052,
+        -4.2821278752708745,
+    )
+    .into_iter()
+    .collect();
+    assert_eq!(
+        roots,
+        [0.05709129450392858, 7.836552326153905, 9.5711628146022587]
+    );
 }
 
 #[test]
@@ -1438,11 +1445,19 @@ fn test_step2_failure_is_a_synchronization_error() {
     // collinear; C++ Ruckig 0.19.4 fails step 2 for DoF 2 on this input.
     let mut input = InputParameter::<3>::new(None);
     input.synchronization = Synchronization::Phase;
-    input.target_position = DataArrayOrVec::Stack([173.3985511435795, -10.164076494485913, -16.99089134758714]);
-    input.max_velocity = DataArrayOrVec::Stack([0.037564289748138364, 1.972109650321082, 1.7571560301775142]);
-    input.max_acceleration = DataArrayOrVec::Stack([4366.711651797925, 183.49031770828947, 33.43799463703024]);
-    input.min_acceleration = Some(DataArrayOrVec::Stack([-2488.816523939997, -1.1325933606420886, -36.85325869019521]));
-    input.max_jerk = DataArrayOrVec::Stack([14412.329460747587, 45630.57859749189, 216165.10759272304]);
+    input.target_position =
+        DataArrayOrVec::Stack([173.3985511435795, -10.164076494485913, -16.99089134758714]);
+    input.max_velocity =
+        DataArrayOrVec::Stack([0.037564289748138364, 1.972109650321082, 1.7571560301775142]);
+    input.max_acceleration =
+        DataArrayOrVec::Stack([4366.711651797925, 183.49031770828947, 33.43799463703024]);
+    input.min_acceleration = Some(DataArrayOrVec::Stack([
+        -2488.816523939997,
+        -1.1325933606420886,
+        -36.85325869019521,
+    ]));
+    input.max_jerk =
+        DataArrayOrVec::Stack([14412.329460747587, 45630.57859749189, 216165.10759272304]);
     let mut otg = Ruckig::<3, IgnoreErrorHandler>::new(None, 0.001);
     let mut traj = Trajectory::<3>::new(None);
     let result = otg.calculate(&input, &mut traj);
@@ -1510,8 +1525,9 @@ fn test_step2_profiles_keep_the_jerk_limit() {
     use rsruckig::position_third_step2::PositionThirdOrderStep2;
     use rsruckig::profile::Profile;
     let (tf, j_max) = (3.0, 1.0);
-    let mut step2 =
-        PositionThirdOrderStep2::new(tf, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 10.0, -10.0, 10.0, -10.0, j_max);
+    let mut step2 = PositionThirdOrderStep2::new(
+        tf, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 10.0, -10.0, 10.0, -10.0, j_max,
+    );
     let mut profile = Profile::default();
     profile.set_boundary(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
     let found = step2.get_profile(&mut profile);
@@ -1595,6 +1611,14 @@ fn test_step2_uzu_profile() {
     assert!(result.is_ok(), "{result:?}");
     assert_float_eq!(traj.get_duration(), 4309.568938701129, r2nd <= 1e-12);
     let t = traj.get_profiles()[0][0].t;
-    let expected = [4.36689820438187, 4300.835142292365, 0.0, 0.0, 0.0, 0.0, 4.366898204381869];
+    let expected = [
+        4.36689820438187,
+        4300.835142292365,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        4.366898204381869,
+    ];
     assert!(almost_equal_vecs(&t, &expected, 1e-9), "{t:?}");
 }
