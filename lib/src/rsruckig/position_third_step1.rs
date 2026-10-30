@@ -184,7 +184,7 @@ impl PositionThirdOrderStep1 {
 
         if profile.check_with_timing(
             ControlSigns::UDDU,
-            ReachedLimits::Vel,
+            ReachedLimits::Acc0Acc1Vel,
             j_max,
             v_max,
             v_min,
@@ -216,7 +216,7 @@ impl PositionThirdOrderStep1 {
 
         if profile.check_with_timing(
             ControlSigns::UDDU,
-            ReachedLimits::Vel,
+            ReachedLimits::Acc1Vel,
             j_max,
             v_max,
             v_min,
@@ -252,7 +252,7 @@ impl PositionThirdOrderStep1 {
 
         if profile.check_with_timing(
             ControlSigns::UDDU,
-            ReachedLimits::Vel,
+            ReachedLimits::Acc0Vel,
             j_max,
             v_max,
             v_min,
