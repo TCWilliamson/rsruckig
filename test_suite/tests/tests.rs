@@ -1377,3 +1377,21 @@ fn test_time_reset_on_retarget() {
     let elapsed = cycles as f64 * dt;
     assert_float_eq!(elapsed, output.trajectory.get_duration(), abs <= 2.0 * dt);
 }
+
+#[test]
+fn test_solve_cub_with_a_zero_constant_term() {
+    // x^3 - 3x^2 + 2x = x (x - 1)(x - 2). With d = 0 C++ Ruckig's
+    // roots::solve_cubic takes x = 0 and solves x^2 - 3x + 2 = 0, the
+    // coefficients shifted down; the port solved x^2 - 3x + d = 0 with the
+    // old d, and returned {0, 3}.
+    let roots: Vec<f64> = rsruckig::roots::solve_cub(1.0, -3.0, 2.0, 0.0)
+        .into_iter()
+        .collect();
+    assert_eq!(roots, [0.0, 1.0, 2.0]);
+
+    // Its linear case, 2x^2 - 4x = 2x (x - 2): the port returned {0}.
+    let roots: Vec<f64> = rsruckig::roots::solve_cub(0.0, 2.0, -4.0, 0.0)
+        .into_iter()
+        .collect();
+    assert_eq!(roots, [0.0, 2.0]);
+}

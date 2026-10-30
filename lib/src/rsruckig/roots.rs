@@ -129,36 +129,22 @@ impl<const N: usize> Default for PositiveSet<N> {
 
 /// Calculate all roots of a*x^3 + b*x^2 + c*x + d = 0
 #[inline]
-pub fn solve_cub(a: f64, b: f64, c: f64, d: f64) -> PositiveSet<3> {
+pub fn solve_cub(mut a: f64, mut b: f64, mut c: f64, mut d: f64) -> PositiveSet<3> {
     let mut roots = PositiveSet::new();
 
     if d.abs() < f64::EPSILON {
         // First solution is x = 0
         roots.insert(0.0);
 
-        // Converting to a quadratic equation
-        let tmp = d;
-        let _d = c;
-        let c = b;
-        let b = a;
-        let _a = 0.0;
+        // Converting to a quadratic equation: x (a x^2 + b x + c) = 0, as
+        // C++ Ruckig's roots::solve_cubic shifts the coefficients down
+        d = c;
+        c = b;
+        b = a;
+        a = 0.0;
+    }
 
-        if b.abs() < f64::EPSILON {
-            // Linear equation
-            if c.abs() > f64::EPSILON {
-                roots.insert(-tmp / c);
-            }
-        } else {
-            // Quadratic equation
-            let discriminant = c * c - 4.0 * b * tmp;
-            if discriminant >= 0.0 {
-                let inv2b = 1.0 / (2.0 * b);
-                let y = discriminant.sqrt();
-                roots.insert((-c + y) * inv2b);
-                roots.insert((-c - y) * inv2b);
-            }
-        }
-    } else if a.abs() < f64::EPSILON {
+    if a.abs() < f64::EPSILON {
         if b.abs() < f64::EPSILON {
             // Linear equation
             if c.abs() > f64::EPSILON {
