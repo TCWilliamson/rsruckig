@@ -1064,7 +1064,7 @@ impl<const DOF: usize> TargetCalculator<DOF> {
             return Ok(RuckigResult::ErrorTrajectoryDuration);
         }
 
-        if (traj.duration - 0.0).abs() < f64::EPSILON {
+        if traj.duration == 0.0 {
             // Copy all profiles for end state
             for dof in 0..self.degrees_of_freedom {
                 traj.profiles[0][dof] = self.blocks[dof].p_min;
@@ -1354,7 +1354,7 @@ impl<const DOF: usize> TargetCalculator<DOF> {
                         "error in step 2, dof: {} input: {}", dof, inp
                     )
                 )?;
-                return Ok(RuckigResult::ErrorExecutionTimeCalculation);
+                return Ok(RuckigResult::ErrorSynchronizationCalculation);
             }
 
             // Uncomment the following line if you want to debug

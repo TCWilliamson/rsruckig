@@ -1397,6 +1397,76 @@ fn test_solve_cub_with_a_zero_constant_term() {
 }
 
 #[test]
+fn test_solve_cub_three_real_roots_as_cpp() {
+    // Three real roots: C++ Ruckig takes the angle as atan(y/x) (+ pi for
+    // x < 0), the port as atan2(y, x); equal in exact arithmetic, here an ulp
+    // apart in the middle root. Expected roots: C++ Ruckig 0.19.4's
+    // roots::solve_cubic compiled with g++ on glibc, as the Rust build.
+    let roots: Vec<f64> =
+        rsruckig::roots::solve_cub(1.0, -17.464806435260094, 75.99874721051052, -4.2821278752708745)
+            .into_iter()
+            .collect();
+    assert_eq!(roots, [0.05709129450392858, 7.836552326153905, 9.5711628146022587]);
+}
+
+#[test]
+fn test_poly_eval_next_to_one() {
+    // C++ Ruckig's roots::poly_eval sums the coefficients only at x == 1.0
+    // exactly; the port did so for |x - 1| < DBL_EPSILON. At x = 1 - 2^-53
+    // the general evaluation of (x - 1)^3's coefficients gives 2^-53, the sum 0.
+    let p: arrayvec::ArrayVec<f64, 4> = [1.0, -3.0, 3.0, -1.0].into_iter().collect();
+    let x = 1.0 - f64::EPSILON / 2.0;
+    assert_eq!(rsruckig::roots::poly_eval(&p, x), f64::EPSILON / 2.0);
+    assert_eq!(rsruckig::roots::poly_eval(&p, 1.0), 0.0);
+}
+
+#[test]
+fn test_step2_failure_is_a_synchronization_error() {
+    // C++ Ruckig returns ErrorSynchronizationCalculation when step 2 finds no
+    // profile for a DoF; the port returned ErrorExecutionTimeCalculation, the
+    // code of step 1. Three rest-to-rest DoFs, phase synchronisation, not
+    // collinear; C++ Ruckig 0.19.4 fails step 2 for DoF 2 on this input.
+    let mut input = InputParameter::<3>::new(None);
+    input.synchronization = Synchronization::Phase;
+    input.target_position = DataArrayOrVec::Stack([173.3985511435795, -10.164076494485913, -16.99089134758714]);
+    input.max_velocity = DataArrayOrVec::Stack([0.037564289748138364, 1.972109650321082, 1.7571560301775142]);
+    input.max_acceleration = DataArrayOrVec::Stack([4366.711651797925, 183.49031770828947, 33.43799463703024]);
+    input.min_acceleration = Some(DataArrayOrVec::Stack([-2488.816523939997, -1.1325933606420886, -36.85325869019521]));
+    input.max_jerk = DataArrayOrVec::Stack([14412.329460747587, 45630.57859749189, 216165.10759272304]);
+    let mut otg = Ruckig::<3, IgnoreErrorHandler>::new(None, 0.001);
+    let mut traj = Trajectory::<3>::new(None);
+    let result = otg.calculate(&input, &mut traj);
+    assert!(
+        matches!(result, Ok(RuckigResult::ErrorSynchronizationCalculation)),
+        "{result:?}"
+    );
+}
+
+#[test]
+fn test_sub_epsilon_duration_is_synchronized() {
+    // C++ Ruckig skips synchronisation only for a duration of exactly 0; the
+    // port skipped it below DBL_EPSILON. Two DoFs whose acceleration only
+    // needs to reach zero, in 1e-17 s and 1e-18 s; durations and profiles
+    // are C++ Ruckig 0.19.4's (step 2 keeps DoF 1's own 1e-18 s profile).
+    let j = 1e7;
+    let a = [1e-10, 1e-11];
+    let mut input = InputParameter::<2>::new(None);
+    input.current_acceleration = DataArrayOrVec::Stack(a);
+    input.target_position = DataArrayOrVec::Stack(a.map(|a| a * a * a / (3.0 * j * j)));
+    input.target_velocity = DataArrayOrVec::Stack(a.map(|a| a * a / (2.0 * j)));
+    input.max_velocity = DataArrayOrVec::Stack([1.0, 1.0]);
+    input.max_acceleration = DataArrayOrVec::Stack([1.0, 1.0]);
+    input.max_jerk = DataArrayOrVec::Stack([j, j]);
+    let mut otg = Ruckig::<2, ThrowErrorHandler>::new(None, 0.001);
+    let mut traj = Trajectory::<2>::new(None);
+    otg.calculate(&input, &mut traj).unwrap();
+    assert_eq!(traj.get_duration(), 1e-17);
+    let profiles = &traj.get_profiles()[0];
+    assert_float_eq!(profiles[0].t[2], 1e-17, r2nd <= 1e-12);
+    assert_float_eq!(profiles[1].t[2], 1e-18, r2nd <= 1e-12);
+}
+
+#[test]
 fn test_first_time_at_position_crossed_twice_in_one_phase() {
     // Starting backwards at -1, the move brakes at the acceleration limit for
     // about 2 s (phase 1, zero jerk), passing -0.25 on the way back (t ~ 0.29)

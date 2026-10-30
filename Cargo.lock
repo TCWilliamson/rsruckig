@@ -715,6 +715,7 @@ dependencies = [
 name = "rsruckig_test_suite"
 version = "0.1.0"
 dependencies = [
+ "arrayvec",
  "float_eq",
  "rand_core",
  "rand_distr",

@@ -191,7 +191,13 @@ pub fn solve_cub(mut a: f64, mut b: f64, mut c: f64, mut d: f64) -> PositiveSet<
 
             // Convert to polar form
             if x.abs() > f64::EPSILON {
-                theta = y.atan2(x);
+                // as C++ Ruckig, rather than y.atan2(x): equal in exact
+                // arithmetic, not always to the last bit
+                theta = if x > 0.0 {
+                    (y / x).atan()
+                } else {
+                    (y / x).atan() + core::f64::consts::PI
+                };
                 r = (x * x - yy).sqrt();
             } else {
                 // Vertical line
@@ -394,7 +400,7 @@ pub fn poly_eval<const N: usize>(p: &ArrayVec<f64, N>, x: f64) -> f64 {
     let n = p.len();
     if x.abs() < f64::EPSILON {
         result = p[n - 1];
-    } else if (x - 1.0).abs() < f64::EPSILON {
+    } else if x == 1.0 {
         result = p.iter().sum();
     } else {
         let mut xn = 1.0;
@@ -443,7 +449,7 @@ pub fn shrink_interval<const N: usize, const MAX_ITS: usize>(
             dxold = dx;
             dx = (h - l) / 2.0;
             rts = l + dx;
-            if (l - rts).abs() < f64::EPSILON {
+            if l == rts {
                 break;
             }
         } else {
@@ -451,7 +457,7 @@ pub fn shrink_interval<const N: usize, const MAX_ITS: usize>(
             dx = f / df;
             let temp = rts;
             rts -= dx;
-            if (temp - rts).abs() < f64::EPSILON {
+            if temp == rts {
                 break;
             }
         }

@@ -7,6 +7,7 @@ publish = false
 
 [dev-dependencies]
 rsruckig = { path = "../lib" }
+arrayvec = { version = "0.7.4", default-features = false }
 float_eq = "1.0.1"
 rand_distr = "0.4.3"
 rand_pcg = "0.3.1"
