@@ -334,9 +334,10 @@ impl PositionThirdOrderStep1 {
                 profile.t[5] = h3 + h1 / a_min;
                 profile.t[6] = profile.t[4] + self.af / j_max;
 
-                if profile.check_with_timing(
+                if profile.check(
                     ControlSigns::UDDU,
                     ReachedLimits::Acc0Acc1,
+                    true,
                     j_max,
                     v_max,
                     v_min,
@@ -361,9 +362,10 @@ impl PositionThirdOrderStep1 {
                 profile.t[5] = h3 - h1 / a_min;
                 profile.t[6] = profile.t[4] + self.af / j_max;
 
-                if profile.check_with_timing(
+                if profile.check(
                     ControlSigns::UDDU,
                     ReachedLimits::Acc0Acc1,
+                    true,
                     j_max,
                     v_max,
                     v_min,
@@ -633,9 +635,10 @@ impl PositionThirdOrderStep1 {
             profile.t[5] = h3_acc1 - (2.0 * self.a0 + j_max * t) * t / a_min;
             profile.t[6] = (self.af - a_min) / j_max;
 
-            if profile.check_with_timing(
+            if profile.check(
                 ControlSigns::UDDU,
                 ReachedLimits::Acc1,
+                true,
                 j_max,
                 v_max,
                 v_min,
