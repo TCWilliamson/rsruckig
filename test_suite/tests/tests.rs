@@ -1397,6 +1397,16 @@ fn test_solve_cub_with_a_zero_constant_term() {
 }
 
 #[test]
+fn test_solve_cub_keeps_a_double_root() {
+    // x^3 - x^2 = x^2 (x - 1): C++ Ruckig's roots::Set keeps both zeros (its
+    // insert does not look for equal values); the port's dropped the second.
+    let roots: Vec<f64> = rsruckig::roots::solve_cub(1.0, -1.0, 0.0, 0.0)
+        .into_iter()
+        .collect();
+    assert_eq!(roots, [0.0, 0.0, 1.0]);
+}
+
+#[test]
 fn test_solve_cub_three_real_roots_as_cpp() {
     // Three real roots: C++ Ruckig takes the angle as atan(y/x) (+ pi for
     // x < 0), the port as atan2(y, x); equal in exact arithmetic, here an ulp

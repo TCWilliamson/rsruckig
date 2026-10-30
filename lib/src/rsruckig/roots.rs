@@ -29,6 +29,8 @@ impl<T: Copy + Default + PartialOrd, const N: usize> Default for Set<T, N> {
 
 /// Kept in ascending order, so that every way of reading it yields the values
 /// sorted, as C++ Ruckig's `roots::Set::begin()` sorts them before access.
+/// Equal values are kept, as there: a double root is inserted twice. The
+/// capacity N covers the most values any solver inserts.
 impl<T: Copy + Default + PartialOrd, const N: usize> Set<T, N> {
     pub fn new() -> Self {
         Set {
@@ -41,14 +43,12 @@ impl<T: Copy + Default + PartialOrd, const N: usize> Set<T, N> {
     }
 
     pub fn insert(&mut self, value: T) {
-        if !self.data.contains(&value) {
-            let at = self
-                .data
-                .iter()
-                .position(|x| value < *x)
-                .unwrap_or(self.data.len());
-            self.data.insert(at, value);
-        }
+        let at = self
+            .data
+            .iter()
+            .position(|x| value < *x)
+            .unwrap_or(self.data.len());
+        self.data.insert(at, value);
     }
 }
 
