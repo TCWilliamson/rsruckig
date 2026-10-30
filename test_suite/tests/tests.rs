@@ -1417,3 +1417,104 @@ fn test_first_time_at_position_crossed_twice_in_one_phase() {
     let time = traj.get_first_time_at_position(0, -0.25).unwrap();
     assert_float_eq!(time, 0.29268652409927465, abs <= 1e-12);
 }
+
+#[test]
+fn test_step2_profiles_keep_the_jerk_limit() {
+    // Step 2 profiles whose jerk jf is solved for (ACC0_ACC1, the
+    // rest-to-rest NONE profile, the 3-step UZU profile) are checked as C++
+    // Ruckig checks them, check_with_timing(tf, jf, ..., jMax): |jf| below the
+    // jerk limit. A rest-to-rest move of 1 with jerk limit 1 needs 3.17 s;
+    // asked to take 3 s, the NONE profile needs jf = 32/27 > 1, which the port
+    // returned. Step 2 now finds no profile, as no profile within the limits
+    // takes 3 s.
+    use rsruckig::position_third_step2::PositionThirdOrderStep2;
+    use rsruckig::profile::Profile;
+    let (tf, j_max) = (3.0, 1.0);
+    let mut step2 =
+        PositionThirdOrderStep2::new(tf, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 10.0, -10.0, 10.0, -10.0, j_max);
+    let mut profile = Profile::default();
+    profile.set_boundary(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+    let found = step2.get_profile(&mut profile);
+    assert!(
+        !found || (0..7).all(|i| profile.t[i] == 0.0 || profile.j[i].abs() <= j_max + 1e-12),
+        "found {found}: j {:?} t {:?}",
+        profile.j,
+        profile.t
+    );
+}
+
+#[test]
+fn test_step2_uzu_profile() {
+    // 3 DoF, time synchronised: DoF 1 has a0 = -af and v0 = vf, so the cubic
+    // of step 2's 3-step UZU profile has a zero constant term. The port
+    // checked that profile with the jerk limit instead of its own jerk jf
+    // (C++ Ruckig: check_with_timing(tf, jf, ..., jMax)) and failed step 2.
+    // Inputs from a differential test against C++ (random 3-DoF states);
+    // expected duration and DoF 0's profile are C++ Ruckig 0.19.4's.
+    // (p0, v0, a0, pf, vf, af, v_max, v_min, a_max, a_min, j_max) per DoF
+    let dofs: [[f64; 11]; 3] = [
+        [
+            0.0,
+            9.546081433000555,
+            -4.374974668969038,
+            -2.9544588945012147e-05,
+            9.546081433000555,
+            4.374974668969038,
+            108.86518595799528,
+            -0.05831162197231956,
+            122.54228508930053,
+            -122.54228508930053,
+            94698.93239213436,
+        ],
+        [
+            0.0,
+            47.79174301084321,
+            -123.32537516818434,
+            4.17119824234245,
+            47.79174301084321,
+            10.367363136480668,
+            534.445092064759,
+            -0.026374538995216138,
+            10.367363136480668,
+            -3201.841567288944,
+            622.5532633348021,
+        ],
+        [
+            0.0,
+            -0.002608706532926195,
+            3506.6775748524033,
+            1.8032944003066386e-05,
+            -0.002608706532926195,
+            -21.513732800841602,
+            0.026107724570856614,
+            -0.026107724570856614,
+            57363.507563508385,
+            -21.513732800841602,
+            6795461.366525948,
+        ],
+    ];
+    let mut input = InputParameter::<3>::new(None);
+    input.min_velocity = Some(DataArrayOrVec::Stack([0.0; 3]));
+    input.min_acceleration = Some(DataArrayOrVec::Stack([0.0; 3]));
+    for (d, x) in dofs.iter().enumerate() {
+        input.current_position[d] = x[0];
+        input.current_velocity[d] = x[1];
+        input.current_acceleration[d] = x[2];
+        input.target_position[d] = x[3];
+        input.target_velocity[d] = x[4];
+        input.target_acceleration[d] = x[5];
+        input.max_velocity[d] = x[6];
+        input.min_velocity.as_mut().unwrap()[d] = x[7];
+        input.max_acceleration[d] = x[8];
+        input.min_acceleration.as_mut().unwrap()[d] = x[9];
+        input.max_jerk[d] = x[10];
+    }
+    let mut otg = Ruckig::<3, ThrowErrorHandler>::new(None, 0.001);
+    let mut traj = Trajectory::<3>::new(None);
+    let result = otg.calculate(&input, &mut traj);
+    assert!(result.is_ok(), "{result:?}");
+    assert_float_eq!(traj.get_duration(), 4309.568938701129, r2nd <= 1e-12);
+    let t = traj.get_profiles()[0][0].t;
+    let expected = [4.36689820438187, 4300.835142292365, 0.0, 0.0, 0.0, 0.0, 4.366898204381869];
+    assert!(almost_equal_vecs(&t, &expected, 1e-9), "{t:?}");
+}

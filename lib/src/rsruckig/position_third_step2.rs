@@ -980,7 +980,7 @@ impl PositionThirdOrderStep2 {
         v_min: f64,
         a_max: f64,
         a_min: f64,
-        _: f64,
+        j_max: f64,
     ) -> bool {
         if f64::abs(self.a0) < f64::EPSILON && f64::abs(self.af) < f64::EPSILON {
             let h1 = 2.0 * a_min * self.g1
@@ -997,14 +997,16 @@ impl PositionThirdOrderStep2 {
             profile.t[5] = self.tf - (2.0 * profile.t[0] + profile.t[1] + 2.0 * profile.t[4]);
             profile.t[6] = profile.t[4];
 
-            return profile.check_with_timing(
+            return profile.check_with_timing_full(
                 ControlSigns::UDDU,
                 ReachedLimits::Acc0Acc1,
+                self.tf,
                 jf,
                 v_max,
                 v_min,
                 a_max,
                 a_min,
+                j_max,
             );
         }
         // UDDU
@@ -1062,14 +1064,16 @@ impl PositionThirdOrderStep2 {
                 - (profile.t[0] + profile.t[1] + profile.t[2] + 2.0 * profile.t[4] + self.af / jf);
             profile.t[6] = profile.t[4] + self.af / jf;
 
-            if profile.check_with_timing(
+            if profile.check_with_timing_full(
                 ControlSigns::UDDU,
                 ReachedLimits::Acc0Acc1,
+                self.tf,
                 jf,
                 v_max,
                 v_min,
                 a_max,
                 a_min,
+                j_max,
             ) {
                 return true;
             }
@@ -1460,14 +1464,16 @@ impl PositionThirdOrderStep2 {
             profile.t[5] = 0.0;
             profile.t[6] = profile.t[0];
 
-            if profile.check_with_timing(
+            if profile.check_with_timing_full(
                 ControlSigns::UDDU,
                 ReachedLimits::None,
+                self.tf,
                 jf,
                 v_max,
                 v_min,
                 a_max,
                 a_min,
+                j_max,
             ) {
                 return true;
             }
@@ -2161,14 +2167,16 @@ impl PositionThirdOrderStep2 {
                 profile.t[5] = 0.0;
                 profile.t[6] = self.tf - (profile.t[0] + profile.t[1]);
 
-                if profile.check_with_timing(
+                if profile.check_with_timing_full(
                     ControlSigns::UDDU,
                     ReachedLimits::None,
-                    j_max,
+                    self.tf,
+                    jf,
                     v_max,
                     v_min,
                     a_max,
                     a_min,
+                    j_max,
                 ) {
                     return true;
                 }
